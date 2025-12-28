@@ -14,3 +14,4 @@ Visualizar projeto na DuckTeam:
 
 Projeto desenvolvido com foco em acessibilidade e velocidade para desenvolvedores. Se encontrar algum bug ou tiver sugestões, abra uma *Issue* no nosso repositório oficial.
 
+
