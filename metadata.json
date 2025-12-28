@@ -1,0 +1,5 @@
+{
+  "name": "Netherz Editor",
+  "description": "A high-performance, stylish web-based code editor for HTML, CSS, and JavaScript with live preview and console.",
+  "requestFramePermissions": []
+}
