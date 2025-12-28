@@ -1,17 +1,20 @@
-# 🌌 Netherz
+<div align="center">
+<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+</div>
 
-> Um editor de código moderno e performático criado pela **DuckTeam**.
+# Run and deploy your AI Studio app
 
-Este repositório contém tudo o que você precisa para rodar o editor Netherz localmente e começar a desenvolver.
+This contains everything you need to run your app locally.
 
-Visualizar projeto na DuckTeam:
-[https://github.com/Duck019/netherz](https://github.com/Duck019/netherz)
+View your app in AI Studio: https://ai.studio/apps/drive/10NKZb6LAAeekhLjp4ZOESd0wnnfKga1_
 
----
+## Run Locally
 
-
-## 🦆 Sobre a DuckTeam
-
-Projeto desenvolvido com foco em acessibilidade e velocidade para desenvolvedores. Se encontrar algum bug ou tiver sugestões, abra uma *Issue* no nosso repositório oficial.
+**Prerequisites:**  Node.js
 
 
+1. Install dependencies:
+   `npm install`
+2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
+3. Run the app:
+   `npm run dev`
