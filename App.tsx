@@ -10,7 +10,7 @@ import { Button } from './components/ui/Button';
 import { CodeState, CodeTab, LogEntry, Space, User, EditorTheme } from './types';
 import { generateSrcDoc, getJsLineOffset } from './utils/codeRunner';
 import { THEMES } from './utils/editorThemes';
-import { Plus, Edit2, Trash2, Eraser, Archive, FileJson, Heart, Cloud, CloudOff } from 'lucide-react';
+import { Plus, Edit2, Trash2, Eraser, Archive, FileJson, Heart, Cloud, CloudOff, AlertTriangle, FileCode, FolderPlus, Download, FileType } from 'lucide-react';
 import { monitorarEstadoAuth, fazerLogout } from './auth';
 import { carregarEspacosRemotos, salvarEspacoRemoto, deletarEspacoRemoto, salvarMuitosEspacos } from './db';
 
@@ -118,6 +118,9 @@ const getStorageKeys = (userId?: string) => {
     activeSpace: `netherz_active_space${suffix}`
   };
 };
+
+// Explicit safe styling for inputs to ensure contrast in both modes
+const SAFE_INPUT_CLASS = "w-full px-4 py-3 bg-white text-gray-900 border border-gray-300 focus:border-nether-500 rounded-xl focus:outline-none focus:ring-4 focus:ring-nether-500/20 dark:bg-gray-800 dark:text-white dark:border-gray-600 transition-all font-medium";
 
 export default function App() {
   // Auth State
@@ -644,7 +647,7 @@ export default function App() {
      reader.readAsText(file);
   };
 
-  // --- DOWNLOAD LOGIC (Unchanged) ---
+  // --- DOWNLOAD LOGIC ---
   const openDownloadModal = () => {
     const currentSpace = spaces.find(s => s.id === activeSpaceId);
     setDownloadName(currentSpace ? currentSpace.name : 'project');
@@ -661,6 +664,66 @@ export default function App() {
     element.click();
     document.body.removeChild(element);
     setIsDownloadModalOpen(false);
+  };
+
+  const handleDownloadSingleHtml = () => {
+     const finalName = downloadName.trim() || 'project';
+     const { html, css, js } = code;
+     
+     // Check if user has written a full HTML structure
+     const isFullDoc = html.toLowerCase().includes('<html');
+     
+     let finalContent = html;
+     
+     if (!isFullDoc) {
+        // Wrap fragment in standard template
+        finalContent = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${finalName}</title>
+  <style>
+${css}
+  </style>
+</head>
+<body>
+${html}
+  <script>
+${js}
+  </script>
+</body>
+</html>`;
+     } else {
+        // Attempt to inject CSS into head
+        if (css.trim()) {
+           if (finalContent.includes('</head>')) {
+              finalContent = finalContent.replace('</head>', `<style>${css}</style>\n</head>`);
+           } else {
+              // Fallback if no head tag found but html exists
+              finalContent = `<style>${css}</style>\n` + finalContent;
+           }
+        }
+        
+        // Attempt to inject JS before body close
+        if (js.trim()) {
+           if (finalContent.includes('</body>')) {
+              finalContent = finalContent.replace('</body>', `<script>${js}</script>\n</body>`);
+           } else {
+              // Fallback
+               finalContent = finalContent + `\n<script>${js}</script>`;
+           }
+        }
+     }
+     
+     try {
+       const blob = new Blob([finalContent], { type: 'text/html;charset=utf-8' });
+       saveAs(blob, `${finalName}.html`);
+       setIsDownloadModalOpen(false);
+     } catch (e) {
+       console.error("Download failed", e);
+       alert("Failed to create file.");
+     }
   };
 
   const exportarProjeto = () => {
@@ -688,7 +751,7 @@ export default function App() {
   };
 
   return (
-    <div className="relative flex flex-col min-h-screen font-sans bg-gray-100 dark:bg-gray-950 transition-colors duration-500">
+    <div className="relative flex flex-col min-h-screen w-full font-sans bg-gray-100 dark:bg-gray-950 transition-colors duration-500 overflow-x-hidden">
       
       {/* Background Blobs */}
       <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
@@ -697,7 +760,7 @@ export default function App() {
          <div className="absolute bottom-[-20%] left-[20%] w-[60%] h-[60%] bg-pink-400/30 dark:bg-fuchsia-900/20 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-[120px] opacity-70 animate-blob animation-delay-4000"></div>
       </div>
 
-      <div className="relative z-10 flex flex-col h-full">
+      <div className="relative z-10 flex flex-col h-full w-full">
         <Header 
           isDark={isDark} 
           toggleTheme={() => setIsDark(!isDark)}
@@ -717,7 +780,7 @@ export default function App() {
           onThemeChange={handleThemeChange}
         />
 
-        <main className={`flex-1 flex flex-col lg:flex-row gap-6 xl:gap-8 p-4 md:p-6 lg:p-8 xl:p-10`}>
+        <main className={`flex-1 flex flex-col lg:flex-row gap-6 xl:gap-8 p-4 md:p-6 lg:p-8 xl:p-10 w-full max-w-[100vw]`}>
           <section className={`transition-all duration-500 ease-in-out flex flex-col ${
             layout === 'split' 
               ? 'flex-1 lg:w-1/2 lg:h-[calc(100vh-8.5rem)]' 
@@ -752,7 +815,7 @@ export default function App() {
           </section>
         </main>
         
-        <footer className="py-2 px-4 border-t border-white/10 bg-white/30 dark:bg-black/30 backdrop-blur-md shrink-0 flex justify-between items-center">
+        <footer className="py-2 px-4 border-t border-white/10 bg-white/30 dark:bg-black/30 backdrop-blur-md shrink-0 flex justify-between items-center w-full">
           <div className="flex items-center gap-2 text-[10px] text-gray-500 dark:text-gray-400 font-medium">
              {user ? (
                 isCloudSyncing ? 
@@ -776,27 +839,158 @@ export default function App() {
         onLogout={handleLogout}
         projectCount={spaces.length}
       />
-      <Modal isOpen={isDownloadModalOpen} onClose={() => setIsDownloadModalOpen(false)} title="Download Project">
-        {/* Same modal content as before */}
-        <div className="space-y-6 p-4">
-             <input type="text" value={downloadName} onChange={(e) => setDownloadName(e.target.value)} className="w-full px-4 py-2 bg-black/5 dark:bg-white/5 border rounded-lg" placeholder="Project Name" />
-             <div className="grid grid-cols-2 gap-4">
-                 <button onClick={performDownloadJson} className="p-4 bg-gray-100 rounded-lg">JSON</button>
-                 <button onClick={exportarProjeto} className="p-4 bg-nether-100 rounded-lg">ZIP</button>
+      
+      {/* Modals with Enhanced UI */}
+      
+      <Modal 
+        isOpen={isDownloadModalOpen} 
+        onClose={() => setIsDownloadModalOpen(false)} 
+        title="Download Project"
+        description="Choose a format to save your code locally."
+        icon={<Download className="w-6 h-6" />}
+      >
+        <div className="space-y-6">
+             <div className="space-y-2">
+               <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Filename</label>
+               <input 
+                  type="text" 
+                  value={downloadName} 
+                  onChange={(e) => setDownloadName(e.target.value)} 
+                  className={SAFE_INPUT_CLASS} 
+                  placeholder="my-awesome-project" 
+                  autoFocus
+               />
+             </div>
+             
+             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                 <button 
+                  onClick={handleDownloadSingleHtml} 
+                  className="group relative flex flex-col items-center gap-3 p-4 rounded-2xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-indigo-500 dark:hover:border-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-all duration-300"
+                 >
+                    <FileCode className="w-8 h-8 text-gray-400 group-hover:text-indigo-500 transition-colors" />
+                    <div className="text-center">
+                      <span className="block text-sm font-bold text-gray-900 dark:text-white">HTML File</span>
+                      <span className="text-[10px] text-gray-500 leading-tight block mt-0.5">Single file bundle</span>
+                    </div>
+                 </button>
+
+                 <button 
+                  onClick={exportarProjeto} 
+                  className="group relative flex flex-col items-center gap-3 p-4 rounded-2xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-nether-500 dark:hover:border-nether-500 hover:bg-nether-50 dark:hover:bg-nether-500/10 transition-all duration-300"
+                 >
+                    <Archive className="w-8 h-8 text-gray-400 group-hover:text-nether-500 transition-colors" />
+                    <div className="text-center">
+                      <span className="block text-sm font-bold text-gray-900 dark:text-white">ZIP Package</span>
+                      <span className="text-[10px] text-gray-500 leading-tight block mt-0.5">Full project folder</span>
+                    </div>
+                 </button>
+
+                 <button 
+                  onClick={performDownloadJson} 
+                  className="group relative flex flex-col items-center gap-3 p-4 rounded-2xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-emerald-500 dark:hover:border-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-all duration-300"
+                 >
+                    <FileJson className="w-8 h-8 text-gray-400 group-hover:text-emerald-500 transition-colors" />
+                    <div className="text-center">
+                      <span className="block text-sm font-bold text-gray-900 dark:text-white">JSON</span>
+                      <span className="text-[10px] text-gray-500 leading-tight block mt-0.5">Backup data</span>
+                    </div>
+                 </button>
              </div>
         </div>
       </Modal>
-      <Modal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} title="Create New Space" footer={<><Button variant="ghost" onClick={() => setIsCreateModalOpen(false)}>Cancel</Button><Button onClick={confirmCreateSpace}>Create</Button></>}>
-        <div className="space-y-4"><input type="text" value={newSpaceName} onChange={(e) => setNewSpaceName(e.target.value)} className="w-full px-4 py-2 border rounded-lg" placeholder="Project Name" autoFocus onKeyDown={(e) => e.key === 'Enter' && confirmCreateSpace()} /></div>
+
+      <Modal 
+        isOpen={isCreateModalOpen} 
+        onClose={() => setIsCreateModalOpen(false)} 
+        title="Create New Space" 
+        description="Start a fresh playground for your next idea."
+        icon={<FolderPlus className="w-6 h-6" />}
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setIsCreateModalOpen(false)}>Cancel</Button>
+            <Button onClick={confirmCreateSpace}>Create Project</Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+            <div className="space-y-2">
+               <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Project Name</label>
+               <input 
+                  type="text" 
+                  value={newSpaceName} 
+                  onChange={(e) => setNewSpaceName(e.target.value)} 
+                  className={SAFE_INPUT_CLASS} 
+                  placeholder="e.g. Portfolio v2" 
+                  autoFocus 
+                  onKeyDown={(e) => e.key === 'Enter' && confirmCreateSpace()} 
+              />
+            </div>
+        </div>
       </Modal>
-      <Modal isOpen={isRenameModalOpen} onClose={() => setIsRenameModalOpen(false)} title="Rename Space" footer={<><Button variant="ghost" onClick={() => setIsRenameModalOpen(false)}>Cancel</Button><Button onClick={confirmRenameSpace}>Rename</Button></>}>
-        <div className="space-y-4"><input type="text" value={renameSpaceName} onChange={(e) => setRenameSpaceName(e.target.value)} className="w-full px-4 py-2 border rounded-lg" autoFocus onKeyDown={(e) => e.key === 'Enter' && confirmRenameSpace()} /></div>
+
+      <Modal 
+        isOpen={isRenameModalOpen} 
+        onClose={() => setIsRenameModalOpen(false)} 
+        title="Rename Space" 
+        description="Give your project a better name."
+        icon={<Edit2 className="w-6 h-6" />}
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setIsRenameModalOpen(false)}>Cancel</Button>
+            <Button onClick={confirmRenameSpace}>Save Changes</Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+            <input 
+                type="text" 
+                value={renameSpaceName} 
+                onChange={(e) => setRenameSpaceName(e.target.value)} 
+                className={SAFE_INPUT_CLASS} 
+                autoFocus 
+                onKeyDown={(e) => e.key === 'Enter' && confirmRenameSpace()} 
+            />
+        </div>
       </Modal>
-      <Modal isOpen={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)} title="Delete Space" footer={<><Button variant="ghost" onClick={() => setIsDeleteModalOpen(false)}>Cancel</Button><Button onClick={confirmDeleteSpace} variant="danger">Delete</Button></>}>
-         <div className="text-center">Are you sure?</div>
+
+      <Modal 
+        isOpen={isDeleteModalOpen} 
+        onClose={() => setIsDeleteModalOpen(false)} 
+        title="Delete Space" 
+        description="This action cannot be undone."
+        icon={<AlertTriangle className="w-6 h-6" />}
+        variant="danger"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setIsDeleteModalOpen(false)}>Cancel</Button>
+            <Button onClick={confirmDeleteSpace} variant="danger" icon={<Trash2 className="w-4 h-4"/>}>Delete Project</Button>
+          </>
+        }
+      >
+         <div className="p-4 bg-red-50 dark:bg-red-500/10 rounded-xl border border-red-100 dark:border-red-500/20 text-center">
+            <p className="text-red-800 dark:text-red-200 font-medium">
+              Are you sure you want to delete this space? All code and history will be permanently lost.
+            </p>
+         </div>
       </Modal>
-      <Modal isOpen={isClearModalOpen} onClose={() => setIsClearModalOpen(false)} title="Clear Code" footer={<><Button variant="ghost" onClick={() => setIsClearModalOpen(false)}>Cancel</Button><Button onClick={confirmClearCode} variant="danger">Clear</Button></>}>
-         <div className="text-center">Remove all code from this tab?</div>
+
+      <Modal 
+        isOpen={isClearModalOpen} 
+        onClose={() => setIsClearModalOpen(false)} 
+        title="Clear Code" 
+        description="Reset this file to empty."
+        icon={<Eraser className="w-6 h-6" />}
+        variant="danger"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setIsClearModalOpen(false)}>Cancel</Button>
+            <Button onClick={confirmClearCode} variant="danger">Clear Code</Button>
+          </>
+        }
+      >
+         <div className="text-gray-600 dark:text-gray-300">
+           You are about to clear all code in the <span className="font-bold font-mono text-nether-600 dark:text-nether-400 uppercase">{activeTab}</span> tab.
+         </div>
       </Modal>
     </div>
   );

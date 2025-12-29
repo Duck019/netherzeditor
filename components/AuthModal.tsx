@@ -11,6 +11,9 @@ interface AuthModalProps {
   onLogin: (user: User) => void; // Prop kept for compatibility but main logic is via auth observer
 }
 
+// Consistent safe input style
+const SAFE_INPUT_CLASS = "w-full pl-10 pr-4 py-2.5 bg-white text-gray-900 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-nether-500 dark:bg-gray-800 dark:text-white dark:border-gray-600 transition-all disabled:opacity-50";
+
 export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin }) => {
   const [isLogin, setIsLogin] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
@@ -98,7 +101,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin }
                 name="name"
                 value={formData.name}
                 onChange={handleChange}
-                className="w-full pl-10 pr-4 py-2.5 bg-black/5 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-nether-500 text-sm text-gray-900 dark:text-white transition-all disabled:opacity-50"
+                className={SAFE_INPUT_CLASS}
                 placeholder="John Doe"
                 disabled={isLoading}
               />
@@ -115,7 +118,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin }
               name="email"
               value={formData.email}
               onChange={handleChange}
-              className="w-full pl-10 pr-4 py-2.5 bg-black/5 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-nether-500 text-sm text-gray-900 dark:text-white transition-all disabled:opacity-50"
+              className={SAFE_INPUT_CLASS}
               placeholder="you@example.com"
               disabled={isLoading}
             />
@@ -131,7 +134,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin }
               name="password"
               value={formData.password}
               onChange={handleChange}
-              className="w-full pl-10 pr-4 py-2.5 bg-black/5 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-nether-500 text-sm text-gray-900 dark:text-white transition-all disabled:opacity-50"
+              className={SAFE_INPUT_CLASS}
               placeholder="••••••••"
               disabled={isLoading}
             />
